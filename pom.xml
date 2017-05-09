@@ -39,6 +39,10 @@
 			<artifactId>cache-ri-impl</artifactId>
 			<version>0.8</version>
 		</dependency>
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			</dependency>
 	</dependencies>
 	<build>
 		<finalName>spring-boot-directory-cache-example</finalName>

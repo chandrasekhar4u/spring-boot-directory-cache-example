@@ -5,9 +5,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class UserRepositoryImpl implements UserRepository {
+	
 	@Cacheable(value="users")
 	public UserDetails findById(String id) {
-		slowResponsee();
 		return new UserDetails(id, "Name"+id);
 	}
 	private void slowResponsee() {

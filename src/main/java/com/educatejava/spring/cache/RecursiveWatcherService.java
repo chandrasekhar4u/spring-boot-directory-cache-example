@@ -1,6 +1,8 @@
 package com.educatejava.spring.cache;
 
-import static java.nio.file.StandardWatchEventKinds.*;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
 import java.io.File;
@@ -39,7 +41,7 @@ public class RecursiveWatcherService {
 	private File rootFolder;
 
 	private WatchService watcher;
-
+	
 	private ExecutorService executor;
 
 	@PostConstruct
@@ -60,6 +62,11 @@ public class RecursiveWatcherService {
 		}
 		executor.shutdown();
 	}
+	
+	private static <T> WatchEvent<T> cast(WatchEvent<?> event) {
+        return (WatchEvent<T>)event;
+    }
+	
 
 	private void startRecursiveWatcher() throws IOException {
 		LOG.info("Starting Recursive Watcher");
@@ -109,6 +116,7 @@ public class RecursiveWatcherService {
 
 				key.pollEvents().stream().filter(e ->
 				e.kind() != OVERFLOW).map(e -> ((WatchEvent<Path>) e).context()).forEach(p -> {
+					
 					final Path absPath = dir.resolve(p);
 					if (absPath.toFile().isDirectory()) {
 						register.accept(absPath);
@@ -117,6 +125,27 @@ public class RecursiveWatcherService {
 						LOG.info("Detected file create/change event at: " + f.getAbsolutePath());
 					}
 				});
+				
+			        /*for (WatchEvent<?> event : key.pollEvents()) {
+			            Kind<?> eventKind = event.kind();
+
+			            // Overflow occurs when the watch event queue is overflown with events.
+			            if (eventKind.equals(OVERFLOW)) {
+			                // TODO: Notify all listeners.
+			                return;
+			            }
+			            WatchEvent<Path> pathEvent = cast(event);
+			            Path file = pathEvent.context();
+
+			            if (eventKind.equals(ENTRY_CREATE)) {
+			            	LOG.info("Detected file ENTRY_CREATE event at: " + file.toAbsolutePath());
+			            } else if (eventKind.equals(ENTRY_MODIFY)) {
+			            	LOG.info("Detected file ENTRY_MODIFY event at: " + file.toAbsolutePath());
+			            } else if (eventKind.equals(ENTRY_DELETE)) {
+			            	LOG.info("Detected file ENTRY_DELETE event at: " + file.toAbsolutePath());
+			            }
+			        }*/
+			    
 
 				boolean valid = key.reset(); // IMPORTANT: The key must be reset
 												// after processed
