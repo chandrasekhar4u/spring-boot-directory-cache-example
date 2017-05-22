@@ -8,6 +8,7 @@ public class UserRepositoryImpl implements UserRepository {
 	
 	@Cacheable(value="users")
 	public UserDetails findById(String id) {
+		System.out.println("findByID Called::: ");
 		return new UserDetails(id, "Name"+id);
 	}
 	private void slowResponsee() {

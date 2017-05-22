@@ -13,11 +13,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.WatchEvent;
+import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -39,13 +41,19 @@ public class RecursiveWatcherService {
 
 	@Value("${root.folder}")
 	private File rootFolder;
+	
+	@Value("${root.folder1}")
+	private File rootFolder1;
 
 	private WatchService watcher;
 	
 	private ExecutorService executor;
+	
+	private ConcurrentHashMap<String, String> directoryMap;
 
 	@PostConstruct
 	public void init() throws IOException {
+		directoryMap=new ConcurrentHashMap<>();
 		watcher = FileSystems.getDefault().newWatchService();
 		executor = Executors.newSingleThreadExecutor();
 		// executor = Executors.newCachedThreadPool();
@@ -87,6 +95,7 @@ public class RecursiveWatcherService {
 								new WatchEvent.Kind[] { ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY },
 								SensitivityWatchEventModifier.HIGH);
 						keys.put(watchKey, dir);
+						System.out.println("File Walk Tree : "+dir);
 						return FileVisitResult.CONTINUE;
 					}
 				});
@@ -97,6 +106,7 @@ public class RecursiveWatcherService {
 
 		// TODO: check impact on non-windows file watching.
 		register.accept(rootFolder.toPath());
+		register.accept(rootFolder1.toPath());
 
 		executor.submit(() -> {
 			while (true) {
@@ -114,7 +124,7 @@ public class RecursiveWatcherService {
 					continue;
 				}
 
-				key.pollEvents().stream().filter(e ->
+				/*key.pollEvents().stream().filter(e ->
 				e.kind() != OVERFLOW).map(e -> ((WatchEvent<Path>) e).context()).forEach(p -> {
 					
 					final Path absPath = dir.resolve(p);
@@ -124,9 +134,9 @@ public class RecursiveWatcherService {
 						final File f = absPath.toFile();
 						LOG.info("Detected file create/change event at: " + f.getAbsolutePath());
 					}
-				});
+				});*/
 				
-			        /*for (WatchEvent<?> event : key.pollEvents()) {
+			        for (WatchEvent<?> event : key.pollEvents()) {
 			            Kind<?> eventKind = event.kind();
 
 			            // Overflow occurs when the watch event queue is overflown with events.
@@ -136,19 +146,20 @@ public class RecursiveWatcherService {
 			            }
 			            WatchEvent<Path> pathEvent = cast(event);
 			            Path file = pathEvent.context();
-
-			            if (eventKind.equals(ENTRY_CREATE)) {
-			            	LOG.info("Detected file ENTRY_CREATE event at: " + file.toAbsolutePath());
+			            final Path absPath = dir.resolve(file);
+			            if (absPath.toFile().isDirectory()) {
+							register.accept(absPath);
+						}
+			            else if (eventKind.equals(ENTRY_CREATE)) {
+			            	LOG.info("Detected file ENTRY_CREATE event at: " + absPath);
 			            } else if (eventKind.equals(ENTRY_MODIFY)) {
-			            	LOG.info("Detected file ENTRY_MODIFY event at: " + file.toAbsolutePath());
+			            	LOG.info("Detected file ENTRY_MODIFY event at: " + absPath);
 			            } else if (eventKind.equals(ENTRY_DELETE)) {
-			            	LOG.info("Detected file ENTRY_DELETE event at: " + file.toAbsolutePath());
+			            	LOG.info("Detected file ENTRY_DELETE event at: " + absPath);
 			            }
-			        }*/
-			    
-
-				boolean valid = key.reset(); // IMPORTANT: The key must be reset
-												// after processed
+			        }
+			        // IMPORTANT: The key must be reset after processed
+				boolean valid = key.reset();
 				if (!valid) {
 					break;
 				}
